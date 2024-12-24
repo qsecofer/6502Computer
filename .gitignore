@@ -1,0 +1,37 @@
+# Ignore the vendor directory
+/vendor/
+
+# Ignore build artifacts
+/bin/
+/obj/
+
+# Ignore Go's built artifacts
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Ignore test binary files
+*.test
+
+# Ignore Go coverage output files
+*.out
+
+# Ignore IDE specific files
+.idea/
+.vscode/
+
+# Ignore OS-specific files
+.DS_Store
+Thumbs.db
+
+# Ignore Go modules cache
+/go.sum
+/go.mod
+
+tijde.md 
+todo.md
+
+#OSX
+.DS_Store
