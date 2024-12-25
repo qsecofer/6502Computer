@@ -35,7 +35,3 @@ func (c *ram) Read(address uint16) byte {
 func (c *ram) RespondsTo(address uint16) bool {
 	return address >= c.Range.Start && address <= c.Range.End
 }
-
-func (c *ram) ReadDisplay() bus.DisplayData {
-	return bus.DisplayData{Line1: "RAM", Line2: ""}
-}

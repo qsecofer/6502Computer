@@ -69,7 +69,3 @@ func (rom *rom) Dump(start int) {
 	}
 	println()
 }
-
-func (rom *rom) ReadDisplay() bus.DisplayData {
-	return bus.DisplayData{Line1: "", Line2: ""}
-}

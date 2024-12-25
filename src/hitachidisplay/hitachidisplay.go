@@ -3,7 +3,6 @@ package hitachidisplay
 import (
 	"computer/src/bus"
 	"fmt"
-	"strings"
 )
 
 const (
@@ -29,7 +28,19 @@ const (
 	CmdSetDDRAMAddr
 )
 
+type DispDataPusher interface {
+	PushData(displaydata DisplayData)
+}
+
+type DisplayData struct {
+	Line1 string
+	Line2 string
+}
+
 type HitachiDisplay struct {
+	DispDataPusher DispDataPusher
+	DisplayData    DisplayData
+
 	Name  string
 	Range bus.AddressRange
 
@@ -47,14 +58,18 @@ type HitachiDisplay struct {
 	ddrbdata byte
 
 	addrescounter uint8
+
+	registeredPackages []DispDataPusher
 }
 
 func New(name string, start, end uint16) *HitachiDisplay {
 	hd := &HitachiDisplay{
-		Name:          name,
-		Range:         bus.AddressRange{Start: start, End: end},
-		DisplayRam:    [NR_OFF_LINES * NR_CHARS]string{},
-		addrescounter: 0,
+		Name:               name,
+		Range:              bus.AddressRange{Start: start, End: end},
+		DisplayRam:         [NR_OFF_LINES * NR_CHARS]string{},
+		addrescounter:      0,
+		registeredPackages: []DispDataPusher{},
+		DisplayData:        DisplayData{},
 	}
 	hd.bufferaddress = hd.Range.Start
 	hd.controladdress = hd.Range.Start + 1
@@ -87,6 +102,7 @@ func (hd *HitachiDisplay) executeCmd(data byte) {
 	if isSendChar(data) {
 		hd.DisplayRam[hd.addrescounter] = string(hd.buffer)
 		hd.addrescounter = (hd.addrescounter + 1) % (NR_OFF_LINES * NR_CHARS)
+		hd.PushData(hd.DisplayRam[hd.addrescounter])
 	}
 }
 
@@ -101,21 +117,6 @@ func (hd *HitachiDisplay) Read(address uint16) byte {
 		return readFunc()
 	}
 	return 0
-}
-
-func (hd *HitachiDisplay) ReadDisplay() bus.DisplayData {
-	var s1, s2 strings.Builder
-	for i := 0; i < NR_OFF_LINES*NR_CHARS; i++ {
-		if i < NR_CHARS {
-			s1.WriteString(hd.DisplayRam[i])
-		} else {
-			s2.WriteString(hd.DisplayRam[i])
-		}
-	}
-	return bus.DisplayData{
-		Line1: s1.String(),
-		Line2: s2.String(),
-	}
 }
 
 func (hd *HitachiDisplay) RespondsTo(address uint16) bool {
@@ -147,6 +148,24 @@ func getcmdindex(cmd uint8) int8 {
 		}
 	}
 	return 0
+}
+
+// DisplayDataPusher interface
+func (hd *HitachiDisplay) PushData(data string) {
+	var displayData DisplayData
+	for i := 0; i < NR_CHARS; i++ {
+		displayData.Line1 += hd.DisplayRam[i]
+	}
+	for i := NR_CHARS; i < NR_OFF_LINES*NR_CHARS; i++ {
+		displayData.Line2 += hd.DisplayRam[i]
+	}
+	for _, dpp := range hd.registeredPackages {
+		dpp.PushData(displayData)
+	}
+}
+
+func (hd *HitachiDisplay) RegisterPackage(dpp DispDataPusher) {
+	hd.registeredPackages = append(hd.registeredPackages, dpp)
 }
 
 // Helper functions

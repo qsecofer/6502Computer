@@ -2,6 +2,7 @@ package computerui
 
 import (
 	"computer/src/computer"
+	"computer/src/hitachidisplay"
 	"computer/src/uiregister"
 	"computer/src/uisevensegmentndidgist"
 	"fmt"
@@ -79,6 +80,7 @@ func New(computer *computer.Computer, canvas fyne.Canvas) *ComputerUI {
 	canvas.SetOnTypedKey(func(keyEvent *fyne.KeyEvent) {
 		ui.HandleKeyEvent(keyEvent)
 	})
+	computer.HD.RegisterPackage(ui)
 	return ui
 }
 
@@ -112,8 +114,6 @@ func (ui *ComputerUI) setValues() {
 	ui.yleds.SetValue(ui.computer.Cpu.Y)
 	ui.flags.SetValue(ui.computer.Cpu.Flags2Byte())
 	ui.memoryDump()
-	ui.hdline1.SetText(ui.computer.Bus.ReadDisplay(0x6000).Line1)
-	ui.hdline2.SetText(ui.computer.Bus.ReadDisplay(0x6000).Line2)
 }
 
 func (ui *ComputerUI) Build() fyne.CanvasObject {
@@ -185,4 +185,12 @@ func (ui *ComputerUI) HandleKeyEvent(keyEvent *fyne.KeyEvent) {
 func (ui *ComputerUI) Update() {
 	ui.debugList.InsertFirst(debugData{Label: ui.computer.Cpu.Debug(ui.computer.Bus)})
 	ui.setValues()
+}
+
+func (ui *ComputerUI) PushData(data hitachidisplay.DisplayData) {
+	fmt.Println("PushData", data)
+	ui.hdline1.SetText(data.Line1)
+	ui.hdline1.Refresh()
+	ui.hdline2.SetText(data.Line2)
+	ui.hdline2.Refresh()
 }

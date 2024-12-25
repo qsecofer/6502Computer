@@ -15,7 +15,6 @@ type Chip interface {
 	Write(address uint16, data byte)
 	Read(address uint16) byte
 	RespondsTo(address uint16) bool
-	ReadDisplay() DisplayData
 }
 
 type Bus struct {
@@ -56,16 +55,4 @@ func (b *Bus) Dump(start uint16, total int) string {
 		}
 	}
 	return data
-}
-
-func (b *Bus) ReadDisplay(address uint16) DisplayData {
-	for _, chip := range b.chips {
-		if chip.RespondsTo(address) {
-			return chip.ReadDisplay()
-		}
-	}
-	return DisplayData{
-		Line1: "",
-		Line2: "",
-	}
 }
