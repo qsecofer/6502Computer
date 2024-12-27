@@ -53,10 +53,12 @@ type ComputerUI struct {
 	xleds     *uiregister.Register
 	yleds     *uiregister.Register
 	flags     *uiregister.Register
-	dumpdsp   *widget.RichText
+	dumpdsp   *widget.Label
 
 	hdline1 *widget.Label
 	hdline2 *widget.Label
+
+	Running bool
 }
 
 func New(computer *computer.Computer, canvas fyne.Canvas) *ComputerUI {
@@ -73,9 +75,10 @@ func New(computer *computer.Computer, canvas fyne.Canvas) *ComputerUI {
 		xleds:     uiregister.NewRegister(),
 		yleds:     uiregister.NewRegister(),
 		flags:     uiregister.NewRegister(),
-		dumpdsp:   widget.NewRichText(),
+		dumpdsp:   widget.NewLabel(""),
 		hdline1:   widget.NewLabel("Line 1"),
 		hdline2:   widget.NewLabel("Line 2"),
+		Running:   false,
 	}
 	ui.debugList.InsertFirst(debugData{Label: fmt.Sprintf("%04X  ", ui.computer.Cpu.PC) + ui.computer.Cpu.Debug(ui.computer.Bus)})
 	ui.setValues()
@@ -86,19 +89,23 @@ func New(computer *computer.Computer, canvas fyne.Canvas) *ComputerUI {
 	return ui
 }
 
-func (ui *ComputerUI) memoryDump() {
-	from := uint16(0x6000)
-	dump := ui.computer.Bus.Dump(from, 0x10)
-	parts := strings.Split(dump, " ")
-	dump = fmt.Sprintf("\n%04X: ", from)
+func (ui *ComputerUI) memoryDump(from uint16, size uint) {
+	data := ui.computer.Bus.Dump(from, int(size))
+	parts := strings.Split(data, " ")
+
+	var builder strings.Builder
 	for i, part := range parts {
-		dump += part + " "
-		if i%16 == 15 {
-			dump += "\n"
-			dump += fmt.Sprintf("%04X: ", from+uint16(i+1))
+		if i%16 == 0 && i != len(parts)-1 {
+			if i > 0 {
+				builder.WriteString("\n")
+			}
+			builder.WriteString(fmt.Sprintf("%04X: ", from+uint16(i)))
 		}
+		builder.WriteString(part + " ")
 	}
-	ui.dumpdsp.ParseMarkdown(dump)
+
+	ui.dumpdsp.SetText(builder.String())
+	ui.dumpdsp.Refresh()
 }
 
 func (ui *ComputerUI) setValues() {
@@ -115,7 +122,7 @@ func (ui *ComputerUI) setValues() {
 	ui.xleds.SetValue(ui.computer.Cpu.X)
 	ui.yleds.SetValue(ui.computer.Cpu.Y)
 	ui.flags.SetValue(ui.computer.Cpu.Flags2Byte())
-	ui.memoryDump()
+	ui.memoryDump(0x0100, 0x100)
 }
 
 func (ui *ComputerUI) Build() fyne.CanvasObject {
@@ -127,6 +134,14 @@ func (ui *ComputerUI) Build() fyne.CanvasObject {
 	btnRun := ui.runButton()
 	btnRun.Resize(fyne.NewSize(100, 50))
 	btnRun.Move(fyne.NewPos(10, 260))
+
+	btnNMI := ui.nmiButton()
+	btnNMI.Resize(fyne.NewSize(100, 50))
+	btnNMI.Move(fyne.NewPos(10, 320))
+
+	btnIRQ := ui.irqButton()
+	btnIRQ.Resize(fyne.NewSize(100, 50))
+	btnIRQ.Move(fyne.NewPos(10, 380))
 
 	ui.dbg.Move(fyne.NewPos(10, 70))
 
@@ -172,9 +187,26 @@ func (ui *ComputerUI) Build() fyne.CanvasObject {
 
 	return container.NewWithoutLayout(
 		append([]fyne.CanvasObject{
-			ui.dbg, btnStep, btnRun, dspPC, dspSP, dspAC, dspX, dspY, dispDump, dispLine1, dispLine2},
+			ui.dbg, btnStep, btnRun, btnNMI, btnIRQ, dspPC, dspSP, dspAC, dspX, dspY, dispDump, dispLine1, dispLine2},
 			dispRegAc, dispRegX, dispRegY, flagsLabel, dispFlags)...)
 
+}
+
+func (ui *ComputerUI) nmiButton() fyne.CanvasObject {
+
+	btn := widget.NewButton("NMI", func() {
+		ui.computer.Cpu.NMI()
+		ui.Update()
+	})
+	return btn
+}
+
+func (ui *ComputerUI) irqButton() fyne.CanvasObject {
+	btn := widget.NewButton("IRQ", func() {
+		ui.computer.Cpu.IRQ()
+		ui.Update()
+	})
+	return btn
 }
 
 func (ui *ComputerUI) executeButton() fyne.CanvasObject {
@@ -187,12 +219,17 @@ func (ui *ComputerUI) executeButton() fyne.CanvasObject {
 
 func (ui *ComputerUI) runButton() fyne.CanvasObject {
 	btn := widget.NewButton("Run", func() {
-		go ui.Run()
+		fmt.Println("Run")
+		ui.Run()
 	})
 	return btn
 }
 
 func (ui *ComputerUI) HandleKeyEvent(keyEvent *fyne.KeyEvent) {
+	switch keyEvent.Name {
+	case fyne.KeyUp:
+
+	}
 }
 
 func (ui *ComputerUI) Update() {

@@ -50,9 +50,6 @@ func (b *Bus) Dump(start uint16, total int) string {
 	data := ""
 	for i := 0; i < total; i++ {
 		data += fmt.Sprintf("%02X ", b.Read(start+uint16(i)))
-		if i%16 == 15 {
-			data += "\n"
-		}
 	}
 	return data
 }

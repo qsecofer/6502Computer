@@ -77,6 +77,44 @@ func (cpu *CPU) ExecuteInstruction(bus *bus.Bus) {
 	Opcodes[opcode].Fn(cpu, operands)
 }
 
+func (cpu *CPU) PC2Stack() {
+	cpu.bus.Write(0x100+uint16(cpu.SP), byte(cpu.PC>>8))
+	cpu.SP--
+	cpu.bus.Write(0x100+uint16(cpu.SP), byte(cpu.PC))
+	cpu.SP--
+}
+
+func (cpu *CPU) Stack2PC() {
+	cpu.SP++
+	cpu.PC = uint16(cpu.bus.Read(0x100 + uint16(cpu.SP)))
+	cpu.SP++
+	cpu.PC |= uint16(cpu.bus.Read(0x100+uint16(cpu.SP))) << 8
+}
+
+func (cpu *CPU) NMI() {
+	cpu.D = false
+	cpu.PC2Stack()
+
+	low := cpu.bus.Read(0xFFFA)
+	high := cpu.bus.Read(0xFFFB)
+	cpu.PC = uint16(high)<<8 | uint16(low)
+
+}
+
+func (cpu *CPU) IRQ() {
+	if cpu.I {
+		return
+	}
+	cpu.D = false
+	cpu.PC2Stack()
+
+	cpu.I = false
+	cpu.B = false
+	low := cpu.bus.Read(0xFFFE)
+	high := cpu.bus.Read(0xFFFF)
+	cpu.PC = uint16(high)<<8 | uint16(low)
+}
+
 func (cpu *CPU) Flags2Byte() byte {
 	var flags byte
 	if cpu.N {

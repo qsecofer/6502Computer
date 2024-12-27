@@ -5,6 +5,8 @@ DSP             .EQ     $6000
 
 reset:
     lda #$80
+    pha
+
 loop:
     nop
     ror A
@@ -18,9 +20,15 @@ echo:
     
 irq:
     lda #$55
+    nop
+    nop
+    nop
     rti
 
 nmi:
+    lda #$EA
+    nop
+    nop
     rti
 
     .org $fffa

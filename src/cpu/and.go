@@ -1,8 +1,8 @@
 package cpu
 
-func (CPU *CPU) ANDImmediate(operands []byte) {
-	CPU.A = CPU.A & operands[0]
-	CPU.Z = CPU.A == 0
-	CPU.N = CPU.A&0x80 != 0
-	CPU.PC += uint16(len(operands) + 1)
+func (cpu *CPU) ANDImmediate(operands []byte) {
+	cpu.A = cpu.A & operands[0]
+	cpu.Z = cpu.A == 0
+	cpu.N = cpu.A&0x80 != 0
+	cpu.PC += uint16(len(operands) + 1)
 }

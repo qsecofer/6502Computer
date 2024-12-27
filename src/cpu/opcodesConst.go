@@ -60,6 +60,8 @@ const (
 
 	NOP = 0xEA
 
+	ORA_Immediate = 0x09
+
 	PHA = 0x48
 
 	PLA = 0x68

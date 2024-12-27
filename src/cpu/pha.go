@@ -1,7 +1,7 @@
 package cpu
 
-func (CPU *CPU) PHA(operands []byte) {
-	CPU.bus.Write(uint16(CPU.SP), CPU.A)
-	CPU.SP--
-	CPU.PC += uint16(len(operands) + 1)
+func (cpu *CPU) PHA(operands []byte) {
+	cpu.bus.Write(0x100+uint16(cpu.SP), cpu.A)
+	cpu.SP--
+	cpu.PC += uint16(len(operands) + 1)
 }
