@@ -10,7 +10,7 @@ const (
 	ADC_Indirect_x = 0x61
 	ADC_Indirect_y = 0x71
 
-	AND_immediate  = 0x29
+	AND_Immediate  = 0x29
 	AND_Zeropage   = 0x25
 	AND_Zeropage_x = 0x35
 	AND_Absolute   = 0x2D
@@ -23,6 +23,8 @@ const (
 
 	BNE = 0xD0
 
+	BEQ = 0xF0
+
 	BMI_Relative = 0x30
 
 	BIT_Absolute = 0x2C
@@ -32,6 +34,8 @@ const (
 	CLD = 0xD8
 
 	CLI = 0x58
+
+	INX = 0xE8
 
 	JMP_Absolute = 0x4C
 
@@ -56,9 +60,15 @@ const (
 
 	NOP = 0xEA
 
+	PHA = 0x48
+
+	PLA = 0x68
+
 	ROR_Accumulator = 0x6A
 
 	RTI = 0x40
+
+	RTS = 0x60
 
 	SED = 0xF8
 

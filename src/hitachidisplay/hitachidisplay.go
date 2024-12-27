@@ -3,6 +3,7 @@ package hitachidisplay
 import (
 	"computer/src/bus"
 	"fmt"
+	"strings"
 )
 
 const (
@@ -153,12 +154,8 @@ func getcmdindex(cmd uint8) int8 {
 // DisplayDataPusher interface
 func (hd *HitachiDisplay) PushData(data string) {
 	var displayData DisplayData
-	for i := 0; i < NR_CHARS; i++ {
-		displayData.Line1 += hd.DisplayRam[i]
-	}
-	for i := NR_CHARS; i < NR_OFF_LINES*NR_CHARS; i++ {
-		displayData.Line2 += hd.DisplayRam[i]
-	}
+	displayData.Line1 = strings.Join(hd.DisplayRam[:NR_CHARS], "")
+	displayData.Line2 = strings.Join(hd.DisplayRam[NR_CHARS:NR_OFF_LINES*NR_CHARS], "")
 	for _, dpp := range hd.registeredPackages {
 		dpp.PushData(displayData)
 	}
@@ -196,6 +193,7 @@ func (hd *HitachiDisplay) clearDisplay() {
 	for i := 0; i < NR_OFF_LINES*NR_CHARS; i++ {
 		hd.DisplayRam[i] = ""
 	}
+	hd.PushData(hd.DisplayRam[hd.addrescounter])
 }
 
 func (hd *HitachiDisplay) cursorShift() {

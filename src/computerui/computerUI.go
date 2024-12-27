@@ -5,9 +5,11 @@ import (
 	"computer/src/hitachidisplay"
 	"computer/src/uiregister"
 	"computer/src/uisevensegmentndidgist"
+
 	"fmt"
 	"image/color"
 	"strings"
+	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
@@ -75,7 +77,7 @@ func New(computer *computer.Computer, canvas fyne.Canvas) *ComputerUI {
 		hdline1:   widget.NewLabel("Line 1"),
 		hdline2:   widget.NewLabel("Line 2"),
 	}
-	ui.debugList.InsertFirst(debugData{Label: ui.computer.Cpu.Debug(ui.computer.Bus)})
+	ui.debugList.InsertFirst(debugData{Label: fmt.Sprintf("%04X  ", ui.computer.Cpu.PC) + ui.computer.Cpu.Debug(ui.computer.Bus)})
 	ui.setValues()
 	canvas.SetOnTypedKey(func(keyEvent *fyne.KeyEvent) {
 		ui.HandleKeyEvent(keyEvent)
@@ -86,7 +88,7 @@ func New(computer *computer.Computer, canvas fyne.Canvas) *ComputerUI {
 
 func (ui *ComputerUI) memoryDump() {
 	from := uint16(0x6000)
-	dump := ui.computer.Bus.Dump(from, 0xF)
+	dump := ui.computer.Bus.Dump(from, 0x10)
 	parts := strings.Split(dump, " ")
 	dump = fmt.Sprintf("\n%04X: ", from)
 	for i, part := range parts {
@@ -122,6 +124,10 @@ func (ui *ComputerUI) Build() fyne.CanvasObject {
 	btnStep.Resize(fyne.NewSize(100, 50))
 	btnStep.Move(fyne.NewPos(10, 15))
 
+	btnRun := ui.runButton()
+	btnRun.Resize(fyne.NewSize(100, 50))
+	btnRun.Move(fyne.NewPos(10, 260))
+
 	ui.dbg.Move(fyne.NewPos(10, 70))
 
 	dspPC := ui.pcdsp.Build()
@@ -156,7 +162,7 @@ func (ui *ComputerUI) Build() fyne.CanvasObject {
 	dispFlags.Move(fyne.NewPos(600, 25))
 
 	dispDump := ui.dumpdsp
-	dispDump.Move(fyne.NewPos(120, 70))
+	dispDump.Move(fyne.NewPos(170, 70))
 
 	dispLine1 := ui.hdline1
 	dispLine1.Move(fyne.NewPos(10, 200))
@@ -166,7 +172,7 @@ func (ui *ComputerUI) Build() fyne.CanvasObject {
 
 	return container.NewWithoutLayout(
 		append([]fyne.CanvasObject{
-			ui.dbg, btnStep, dspPC, dspSP, dspAC, dspX, dspY, dispDump, dispLine1, dispLine2},
+			ui.dbg, btnStep, btnRun, dspPC, dspSP, dspAC, dspX, dspY, dispDump, dispLine1, dispLine2},
 			dispRegAc, dispRegX, dispRegY, flagsLabel, dispFlags)...)
 
 }
@@ -179,18 +185,40 @@ func (ui *ComputerUI) executeButton() fyne.CanvasObject {
 	return btn
 }
 
+func (ui *ComputerUI) runButton() fyne.CanvasObject {
+	btn := widget.NewButton("Run", func() {
+		go ui.Run()
+	})
+	return btn
+}
+
 func (ui *ComputerUI) HandleKeyEvent(keyEvent *fyne.KeyEvent) {
 }
 
 func (ui *ComputerUI) Update() {
-	ui.debugList.InsertFirst(debugData{Label: ui.computer.Cpu.Debug(ui.computer.Bus)})
+	ui.debugList.InsertFirst(debugData{Label: fmt.Sprintf("%04X  ", ui.computer.Cpu.PC) + ui.computer.Cpu.Debug(ui.computer.Bus)})
 	ui.setValues()
 }
 
 func (ui *ComputerUI) PushData(data hitachidisplay.DisplayData) {
-	fmt.Println("PushData", data)
 	ui.hdline1.SetText(data.Line1)
 	ui.hdline1.Refresh()
 	ui.hdline2.SetText(data.Line2)
 	ui.hdline2.Refresh()
+}
+
+func (ui *ComputerUI) Run() {
+	const (
+		clockSpeed    = 60
+		clockDuration = time.Second / clockSpeed
+	)
+	for {
+		currentTime := time.Now()
+		ui.computer.Cpu.ExecuteInstruction(ui.computer.Bus)
+		ui.Update()
+		sleepDuration := clockDuration - time.Since(currentTime)
+		if sleepDuration > 0 {
+			time.Sleep(sleepDuration)
+		}
+	}
 }

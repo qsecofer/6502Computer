@@ -50,6 +50,6 @@ lint:
 
 rom: FORCE
 	@echo "Building the ROM..."
-	@vasm -Fbin -dotdir -wdc02 -o ./rom/bios.bin ./asm/bendps1.asm
+	@vasm -Fbin -dotdir -wdc02 -o ./rom/bios.bin ./asm/HelloWorld.asm
 
 FORCE:
