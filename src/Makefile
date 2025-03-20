@@ -50,6 +50,6 @@ lint:
 
 rom: FORCE
 	@echo "Building the ROM..."
-	@vasm -Fbin -dotdir -wdc02 -o ./rom/bios.bin ./asm/bios.asm
+	@vasm -Fbin -dotdir -wdc02 -o ./rom/bios.bin ./asm/helloWorld-4bitmode.asm
 
 FORCE:

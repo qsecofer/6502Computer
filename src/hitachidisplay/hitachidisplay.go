@@ -10,9 +10,13 @@ const (
 	NR_OFF_LINES = 2
 	NR_CHARS     = 40
 
-	RS = 0x20
-	RW = 0x40
-	E  = 0x80
+	RS4bit = 0x10
+	RW4bit = 0x20
+	E4bit  = 0x40
+
+	RS8bit = 0x20
+	RW8bit = 0x40
+	E8bit  = 0x80
 )
 
 type Command byte
@@ -29,6 +33,26 @@ const (
 	CmdSetDDRAMAddr
 )
 
+type OperationMode byte
+
+const (
+	Mode4bit OperationMode = iota
+	Mode8bit
+)
+
+type state int
+
+const (
+	init4bit state = iota
+	awaitEnable
+	clearEnable
+	idle
+)
+
+type stateMachine struct {
+	currentState state
+}
+
 type DispDataPusher interface {
 	PushData(displaydata DisplayData)
 }
@@ -44,6 +68,7 @@ type HitachiDisplay struct {
 
 	Name  string
 	Range bus.AddressRange
+	mode  OperationMode
 
 	DisplayRam [NR_OFF_LINES * NR_CHARS]string
 
@@ -61,9 +86,11 @@ type HitachiDisplay struct {
 	addrescounter uint8
 
 	registeredPackages []DispDataPusher
+
+	stateMachine stateMachine
 }
 
-func New(name string, start, end uint16) *HitachiDisplay {
+func New(name string, start, end uint16, mode OperationMode) *HitachiDisplay {
 	hd := &HitachiDisplay{
 		Name:               name,
 		Range:              bus.AddressRange{Start: start, End: end},
@@ -72,10 +99,12 @@ func New(name string, start, end uint16) *HitachiDisplay {
 		registeredPackages: []DispDataPusher{},
 		DisplayData:        DisplayData{},
 	}
+	hd.mode = mode
 	hd.bufferaddress = hd.Range.Start
 	hd.controladdress = hd.Range.Start + 1
 	hd.ddra = hd.Range.Start + 3
 	hd.ddrb = hd.Range.Start + 2
+	hd.stateMachine = stateMachine{currentState: init4bit}
 	return hd
 }
 
@@ -83,7 +112,7 @@ func (hd *HitachiDisplay) executeCmd(data byte) {
 	if data == 0 {
 		return
 	}
-	if isExecuteControlCommand(data) {
+	if hd.isExecuteControlCommand(data) {
 		commands := map[Command]func(){
 			CmdClearDisplay:   hd.clearDisplay,
 			CmdReturnHome:     hd.returnHome,
@@ -100,7 +129,7 @@ func (hd *HitachiDisplay) executeCmd(data byte) {
 			commandFunc()
 		}
 	}
-	if isSendChar(data) {
+	if hd.isSendChar(data) {
 		hd.DisplayRam[hd.addrescounter] = string(hd.buffer)
 		hd.addrescounter = (hd.addrescounter + 1) % (NR_OFF_LINES * NR_CHARS)
 		hd.PushData(hd.DisplayRam[hd.addrescounter])
@@ -125,7 +154,7 @@ func (hd *HitachiDisplay) RespondsTo(address uint16) bool {
 }
 
 func (hd *HitachiDisplay) Write(address uint16, data byte) {
-	writeFuncs := map[uint16]func(byte){
+	writeFuncs8bit := map[uint16]func(byte){
 		hd.bufferaddress: func(data byte) { hd.buffer = data },
 		hd.controladdress: func(data byte) {
 			hd.control = data
@@ -134,8 +163,25 @@ func (hd *HitachiDisplay) Write(address uint16, data byte) {
 		hd.ddra: func(data byte) { hd.ddradata = data },
 		hd.ddrb: func(data byte) { hd.ddrbdata = data },
 	}
-	if writeFunc, exists := writeFuncs[address]; exists {
-		writeFunc(data)
+	if hd.mode == Mode8bit {
+
+		if writeFunc, exists := writeFuncs8bit[address]; exists {
+			writeFunc(data)
+		}
+	} else {
+		switch hd.stateMachine.currentState {
+		case init4bit:
+			hd.buffer = data << 4
+			hd.stateMachine.currentState = awaitEnable
+		case awaitEnable:
+			hd.stateMachine.currentState = clearEnable
+		case clearEnable:
+			hd.stateMachine.currentState = idle
+			hd.executeCmd(hd.buffer)
+		case idle:
+
+		}
+
 	}
 }
 
@@ -167,24 +213,40 @@ func (hd *HitachiDisplay) RegisterPackage(dpp DispDataPusher) {
 
 // Helper functions
 
-func isExecuteControlCommand(cmd uint8) bool {
-	return isEset(cmd) && !isRSset(cmd) && !isRWset(cmd)
+func (hd *HitachiDisplay) isExecuteControlCommand(cmd uint8) bool {
+	return hd.isEset(cmd) && !hd.isRSset(cmd) && !hd.isRWset(cmd)
 }
 
-func isSendChar(cmd uint8) bool {
-	return isEset(cmd) && isRSset(cmd) && !isRWset(cmd)
+func (hd *HitachiDisplay) isSendChar(cmd uint8) bool {
+	if hd.mode == Mode8bit {
+		return hd.isEset(cmd) && hd.isRSset(cmd) && !hd.isRWset(cmd)
+	} else {
+		return false
+	}
 }
 
-func isRSset(cmd uint8) bool {
-	return cmd&RS != 0
+func (hd *HitachiDisplay) isRSset(cmd uint8) bool {
+	if hd.mode == Mode8bit {
+		return cmd&RS8bit != 0
+	} else {
+		return false
+	}
 }
 
-func isRWset(cmd uint8) bool {
-	return cmd&RW != 0
+func (hd *HitachiDisplay) isRWset(cmd uint8) bool {
+	if hd.mode == Mode8bit {
+		return cmd&RW8bit != 0
+	} else {
+		return false
+	}
 }
 
-func isEset(cmd uint8) bool {
-	return cmd&E != 0
+func (hd *HitachiDisplay) isEset(cmd uint8) bool {
+	if hd.mode == Mode8bit {
+		return cmd&E8bit != 0
+	} else {
+		return cmd&E4bit != 0
+	}
 }
 
 // Hitachi control functions
@@ -213,6 +275,7 @@ func (hd *HitachiDisplay) functionSet() {
 }
 
 func (hd *HitachiDisplay) returnHome() {
+	hd.addrescounter = 0
 	fmt.Println("Return Home")
 }
 

@@ -3,6 +3,7 @@ PORTB = $6000
   .org $8000
 
 reset:
+  nop
   jsr lcd_instruction
   nop
   

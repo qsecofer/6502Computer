@@ -2,20 +2,17 @@ package main
 
 import (
 	"computer/src/computer"
-	"computer/src/computerui"
+	"fmt"
+	"os"
 
-	"fyne.io/fyne/v2"
-	"fyne.io/fyne/v2/app"
+	tea "github.com/charmbracelet/bubbletea"
 )
 
 func main() {
-	app := app.New()
-	win := app.NewWindow("Computer")
-	win.Resize(fyne.NewSize(750, 600))
-
-	computer := computer.New()
-	computerUI := computerui.New(computer, win.Canvas())
-	win.SetContent(computerUI.Build())
-
-	win.ShowAndRun()
+	comp := computer.New()
+	p := tea.NewProgram(initialModel(comp), tea.WithAltScreen())
+	if _, err := p.Run(); err != nil {
+		fmt.Printf("Alas, there's been an error: %v", err)
+		os.Exit(1)
+	}
 }

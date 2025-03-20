@@ -58,6 +58,8 @@ const (
 
 	LDY_Immediate = 0xA0
 
+	LSR_Accumulator = 0x4A
+
 	NOP = 0xEA
 
 	ORA_Immediate = 0x09

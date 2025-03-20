@@ -34,7 +34,7 @@ reset:
   lda #%11111111 ; Set all pins on port B to output
   sta DDRB
   lda #%00000000 ; Set all pins on port A to input
-  sta DDRA
+  ; sta DDRA
 
   jsr lcd_init
   lda #%00101000 ; Set 4-bit mode; 2-line display; 5x8 font
